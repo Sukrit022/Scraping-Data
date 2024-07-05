@@ -3,7 +3,7 @@ import chrome from 'selenium-webdriver/chrome.js';
 import fs from 'fs';
 
 function replacer(key, value) {
-  if (key == "price") {
+  if (typeof value === 'string') {
     const pricePattern = /Rs\.\s*([\d,]+)/i;
     const match = value.match(pricePattern);
 
@@ -24,20 +24,22 @@ async function scrape() {
   try {
     await driver.get('https://www.nvidia.com/en-in/geforce/buy/');
 
-    let gpus = await driver.findElements(By.className('aem-Grid aem-Grid--10 aem-Grid--default--10 aem-Grid--phone--10 '));
+    let gpus = await driver.findElements(By.className('aem-Grid aem-Grid--10 aem-Grid--default--10 '));
 
 
     console.log(`Found ${gpus.length} GPU elements`);
-    let gpuData = [];
-    console.log(gpus);
+    let gpuData = {};
 
     for (let gpu of gpus) {
       let name = await gpu.findElement(By.className('title')).getText();
+      let price = null
 
-      let priceElement = await gpu.findElement(By.className('startingprice'));
-      let price = priceElement ? await priceElement.getText() : 'NULL';
-
-      gpuData.push({ name, price });
+      try {
+        let priceElement = await gpu.findElement(By.className('startingprice'));
+        price = await priceElement.getText();
+      } catch (error) {
+      }
+      gpuData[name] = price;
     }
 
     fs.writeFileSync('gpuData.json', JSON.stringify(gpuData, replacer, 2));
